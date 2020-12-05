@@ -2,34 +2,29 @@ import re
 import sys
 
 
-def to_decimal(s, one_token):
+def to_decimal(s, one_tokens):
     '''
     Converts a string representing a binary number to decimal.
     For example,
 
-      >> to_decimal('FBFBBFF', 'B')
-      44
+      >> to_decimal('FBFBBFFRLR', {'B','R'})
+      357
 
-    Since this would be 0101100 in binary
+    since this would be 0101100100 in binary.
     '''
     res = 0
     n_bits = len(s)
     for i in range(n_bits):
-        res |= (s[i] == one_token) << (n_bits-1-i)
+        res |= (s[i] in one_tokens) << (n_bits-1-i)
     return res
 
 
 def get_seat_id(seat):
     '''
     It's just a binary number in disguise.
-
-    Note we could actually do this as one call to to_decimal
-    using 'B' and 'R' both as one_token's (since *8 effectively
-    shifts all bits to the left by 3), but this also works
     '''
-    seat, row = seat[:7], seat[7:]
-    seat_id = 8*to_decimal(seat, 'B') + to_decimal(row, 'R')
-    return seat_id
+    one_tokens={'B', 'R'}
+    return to_decimal(seat, one_tokens)
 
 
 def part1(seats):
