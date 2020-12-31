@@ -1,71 +1,79 @@
 import sys
 
 
-def wrapped_slice(cups, i, k):
-    n = len(cups)
-    # wrap around slice of `k` elements starting at index `i`
-    if i + k <= n:
-        s = cups[i:i+k]
-        del cups[i:i+k]
-    else:
-        s = cups[i:] + cups[:i+k-n]
-        del cups[i:]
-        del cups[:i+k-n]
-    return s
+def part1_result(one_cup, n_cups):
+    res = []
+    current = one_cup.next
+    while len(res) < n_cups - 1:
+        res.append(str(current.label))
+        current = current.next
+    return ''.join(res)
 
 
-def part1(cups):
-    n = len(cups)
-    idx = 0
+def part2_result(one_cup, n_cups):
+    return one_cup.next.label * one_cup.next.next.label
+
+
+class Cup:
+    def __init__(self, label):
+        self.label = label
+        self.next = None
+
+
+def play(cups, n_moves, result_fn):
+    n_cups = len(cups)
     min_label = min(cups)
     max_label = max(cups)
 
-    for _ in range(100):
-        label = cups[idx]
+    cups = [Cup(label) for label in cups]
+    for i in range(n_cups):
+        cups[i].next = cups[(i + 1) % n_cups]
 
-        sl = wrapped_slice(cups, idx+1, 3)
+    # direct mapping to each cup
+    label_to_cup = {cup.label: cup for cup in cups}
 
-        # destination must not be in slice, and wraps around
-        destination = label - 1
-        if destination < min_label:
-            destination = max_label
-        while destination in sl:
-            destination -= 1
-            if destination < min_label:
-                destination = max_label
-        new_idx = cups.index(destination)
-        cups = cups[:new_idx+1] + sl + cups[new_idx+1:]
+    current = cups[0]
 
-        # BAD ASSUMPTION: can only move 2 elements if slice wrapped around
-        #if new_idx < idx:
-        #    # slice was inserted before current cup, so add 3
-        #    idx = (idx + 3) % n
+    for move in range(n_moves):
+        label = current.label
+        # remove next 3 cups
+        sl = [current.next, current.next.next, current.next.next.next]
+        sl_labels = {c.label for c in sl}
+        current.next = sl[-1].next
 
-        # index of our current label has now changed
-        idx = cups.index(label)
+        # get next destination cup which is not a part of current slice
+        # (can wrap around)
+        destination_label = label - 1
+        if destination_label < min_label:
+            destination_label = max_label
+        while destination_label in sl_labels:
+            destination_label -= 1
+            if destination_label < min_label:
+                destination_label = max_label
+        destination = label_to_cup[destination_label]
 
-        # new cup is at next index
-        idx = (idx + 1) % n
+        # insert slice back into cups
+        old_destination_next = destination.next
+        destination.next = sl[0]
+        sl[-1].next = old_destination_next
 
-    res = cups[cups.index(1)+1:] + cups[:cups.index(1)]
-    res = ''.join(str(d) for d in res)
-    return res
+        # update new current cup to be the next one from the current
+        current = current.next
 
-
-def part2():
-    return None
+    one_cup = label_to_cup[1]
+    return result_fn(one_cup, n_cups)
 
 
 def main(input_file):
     with open(input_file, 'r') as f:
         cups = [int(d) for d in f.read().strip()]
-    #cups = [int(d) for d in "389125467"]
-    val = part1(cups)
-    print('Part 1:', val)
 
+    val1 = play(cups[:], 100, part1_result)
+    print('Part 1:', val1)
 
-    val = part2()
-    print('Part 1:', val)
+    cups.extend(range(10, 1000000+1))
+    val2 = play(cups, 10000000, part2_result)
+    print('Part 2:', val2)
 
 
 if __name__ == '__main__':
